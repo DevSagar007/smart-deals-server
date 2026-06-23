@@ -30,22 +30,60 @@ async function run() {
 
     const db = client.db("smart_db");
     const productsCollection = db.collection("products");
+    const bidsCollection = db.collection("bids");
+    const userCollection = db.collection("users");
+
+    // user post
+    app.post("/users", async (red, res) => {
+      const newUser = red.body;
+
+      // check existing user
+      const email = red.body.email;
+      const query = { email: email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        res.send({
+          message:
+            "User already exists. No need to insert again, otherwise things might get messy 😄",
+        });
+      } else {
+        const result = await userCollection.insertOne(newUser);
+        res.send(result);
+      }
+    });
+    // get products
+    app.get("/products", async (req, res) => {
+      console.log(req.query);
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
+      const cursor = productsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
     // get products
-    app.get('/products', async (req, res) => {
-      const cursor = productsCollection.find();
-      const result = await cursor.toArray();
-      res.send(result)
+    // app.get("/products", async (req, res) => {
+    //   const projectFields = { title: 1, price_min: 1, price_max: 1, image: 1 };
+    //   const cursor = productsCollection
+    //     .find()
+    //     .sort({ price_min: 1 })
+    //     .skip(2)
+    //     .limit(5)
+    //     .project(projectFields);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
 
-    })
-
-    // get products with id 
-    app.get('/products/:id', async (req, res) => {
+    // get products with id
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await productsCollection.findOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // add product
     app.post("/products", async (req, res) => {
@@ -74,6 +112,26 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // bids related api
+    app.get("/bids", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.buyer_email = email;
+      }
+
+      const cursor = bidsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // post bids
+    app.post("/bids", async (req, res) => {
+      const newBid = req.body;
+      const result = await bidsCollection.insertOne(newBid);
       res.send(result);
     });
 
