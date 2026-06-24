@@ -51,6 +51,7 @@ async function run() {
         res.send(result);
       }
     });
+
     // get products
     app.get("/products", async (req, res) => {
       console.log(req.query);
@@ -60,6 +61,13 @@ async function run() {
         query.email = email;
       }
       const cursor = productsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // get latest product
+    app.get("/latest-products", async (req, res) => {
+      const cursor = productsCollection.find().sort({ create_at: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     });
