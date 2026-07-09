@@ -7,11 +7,51 @@ const port = process.env.PORT || 3000;
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
+// firebase initialize
+const { initializeApp, cert } = require("firebase-admin/app");
+
+const serviceAccount = require("./smafirebase-adminsdk.json");
+
+initializeApp({
+  credential: cert(serviceAccount),
+});
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+const logger = (req, res, next) => {
+  console.log("logging info");
+  next();
+};
+const { getAuth } = require("firebase-admin/auth");
+
+const verifyFBToken = async (req, res, next) => {
+  console.log("in the verify middleware", req.headers.authorization);
+  if (!req.headers.authorization) {
+    // do not allow to go
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  // verify id token
+  try {
+    const userInfo = await getAuth().verifyIdToken(token);
+
+    console.log("after token validation", userInfo);
+
+    req.user = userInfo;
+
+    next();
+  } catch (err) {
+    console.log(err);
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uhofepr.mongodb.net/?appName=Cluster0`;
 
@@ -135,7 +175,8 @@ async function run() {
     });
 
     // bids for buyer
-    app.get("/bids", async (req, res) => {
+    app.get("/bids", logger, verifyFBToken, async (req, res) => {
+      // console.log("headers", req.headers);
       const email = req.query.email;
       const query = {};
       if (email) {
