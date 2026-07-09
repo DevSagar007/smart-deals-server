@@ -1,5 +1,7 @@
 const express = require("express");
 require("dotenv").config();
+// import jwt 
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -73,6 +75,25 @@ async function run() {
     const productsCollection = db.collection("products");
     const bidsCollection = db.collection("bids");
     const userCollection = db.collection("users");
+
+    // jwt related apis
+    app.post('/getToken', (req, res) => {
+      const loggedUser = req.body;
+      const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({token: token})
+    })
+    
+    app.post("/getToken", (req, res) => {
+      const loggedUser = req.body;
+
+      const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.send({ token });
+    });
 
     // user post
     app.post("/users", async (red, res) => {
