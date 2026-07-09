@@ -41,7 +41,7 @@ const verifyFBToken = async (req, res, next) => {
   // verify id token
   try {
     const userInfo = await getAuth().verifyIdToken(token);
-
+    req.token_email = userInfo.email;
     console.log("after token validation", userInfo);
 
     req.user = userInfo;
@@ -49,7 +49,7 @@ const verifyFBToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.log(err);
-    console.log('invalid token')
+    console.log("invalid token");
     return res.status(401).send({ message: "Unauthorized access" });
   }
 };
@@ -165,7 +165,7 @@ async function run() {
     });
 
     // get product bids
-    app.get("/products/bids/:productId", async (req, res) => {
+    app.get("/products/bids/:productId", verifyFBToken, async (req, res) => {
       const productId = req.params.productId;
       const query = {
         product: productId,
@@ -178,9 +178,13 @@ async function run() {
     // bids for buyer
     app.get("/bids", logger, verifyFBToken, async (req, res) => {
       // console.log("headers", req.headers);
+      console.log("headers", req);
       const email = req.query.email;
       const query = {};
       if (email) {
+        if (email !== req.token_email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
         query.buyer_email = email;
       }
 
