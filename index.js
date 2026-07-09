@@ -49,6 +49,7 @@ const verifyFBToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.log(err);
+    console.log('invalid token')
     return res.status(401).send({ message: "Unauthorized access" });
   }
 };
