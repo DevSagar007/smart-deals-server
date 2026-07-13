@@ -56,6 +56,20 @@ const verifyFBToken = async (req, res, next) => {
   }
 };
 
+// Verify jwt token
+const verifyJWTToken = (req, res, next) => {
+  console.log("in middleware", req.headers);
+  const authorization = req.headers.authorization
+  if (!authorization) {
+    return res.status(401).send({message: "unauthorized access"})
+  }
+  const token = authorization.split('')[1];
+  if(!token) {
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  next();
+}
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uhofepr.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -197,15 +211,15 @@ async function run() {
     });
 
     // bids for buyer
-    app.get("/bids", logger, verifyFBToken, async (req, res) => {
+    app.get("/bids", logger, verifyFBToken, verifyJWTToken, async (req, res) => {
       // console.log("headers", req.headers);
-      console.log("headers", req);
+
       const email = req.query.email;
       const query = {};
       if (email) {
-        if (email !== req.token_email) {
-          return res.status(403).send({ message: "forbidden access" });
-        }
+        // if (email !== req.token_email) {
+        //   return res.status(403).send({ message: "forbidden access" });
+        // }
         query.buyer_email = email;
       }
 
