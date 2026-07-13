@@ -1,6 +1,6 @@
 const express = require("express");
 require("dotenv").config();
-// import jwt 
+// import jwt
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const app = express();
@@ -58,17 +58,30 @@ const verifyFBToken = async (req, res, next) => {
 
 // Verify jwt token
 const verifyJWTToken = (req, res, next) => {
-  console.log("in middleware", req.headers);
-  const authorization = req.headers.authorization
+  const authorization = req.headers.authorization;
+
   if (!authorization) {
-    return res.status(401).send({message: "unauthorized access"})
+    return res.status(401).send({ message: "Unauthorized access" });
   }
-  const token = authorization.split('')[1];
-  if(!token) {
-    return res.status(401).send({ message: "unauthorize access" });
+
+  const token = authorization.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized access" });
   }
-  next();
-}
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorized access" });
+    }
+    // put it in the right place
+    console.log("after decoded", decoded);
+    req.token_email = decoded.email;
+    req.decoded = decoded;
+
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uhofepr.mongodb.net/?appName=Cluster0`;
 
@@ -91,14 +104,14 @@ async function run() {
     const userCollection = db.collection("users");
 
     // jwt related apis
-    app.post('/getToken', (req, res) => {
+    app.post("/getToken", (req, res) => {
       const loggedUser = req.body;
       const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {
         expiresIn: "1h",
       });
-      res.send({token: token})
-    })
-    
+      res.send({ token: token });
+    });
+
     app.post("/getToken", (req, res) => {
       const loggedUser = req.body;
 
@@ -210,23 +223,51 @@ async function run() {
       res.send(result);
     });
 
-    // bids for buyer
-    app.get("/bids", logger, verifyFBToken, verifyJWTToken, async (req, res) => {
-      // console.log("headers", req.headers);
+    // bids
+    app.get("/bids", verifyJWTToken, async (req, res) => {
+      console.log("headers", req.headers);
+      console.log("Query Email:", req.query.email);
+      console.log("Token Email:", req.token_email);
 
       const email = req.query.email;
       const query = {};
       if (email) {
-        // if (email !== req.token_email) {
-        //   return res.status(403).send({ message: "forbidden access" });
-        // }
         query.buyer_email = email;
+      }
+
+      // verify user have access to see this data
+      if (email !== req.token_email) {
+        return res.status(403).send({ message: "forbidden access" });
       }
 
       const cursor = bidsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    // bids for buyer with firebase
+    // app.get(
+    //   "/bids",
+    //   logger,
+    //   verifyFBToken,
+    //   verifyJWTToken,
+    //   async (req, res) => {
+    //     // console.log("headers", req.headers);
+
+    //     const email = req.query.email;
+    //     const query = {};
+    //     if (email) {
+    //       // if (email !== req.token_email) {
+    //       //   return res.status(403).send({ message: "forbidden access" });
+    //       // }
+    //       query.buyer_email = email;
+    //     }
+
+    //     const cursor = bidsCollection.find(query);
+    //     const result = await cursor.toArray();
+    //     res.send(result);
+    //   },
+    // );
 
     // post bids
     app.post("/bids", async (req, res) => {
