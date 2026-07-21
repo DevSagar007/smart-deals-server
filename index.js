@@ -13,6 +13,9 @@ dns.setServers(["8.8.8.8", "1.1.1.1"]);
 const { initializeApp, cert } = require("firebase-admin/app");
 
 // index.js
+if (!process.env.FIREBASE_SERVICE_KEY) {
+  throw new Error("Missing FIREBASE_SERVICE_KEY environment variable.");
+}
 const decoded = Buffer.from(
   process.env.FIREBASE_SERVICE_KEY,
   "base64",
@@ -301,6 +304,10 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`);
+  });
+}
+
+module.exports = app;
